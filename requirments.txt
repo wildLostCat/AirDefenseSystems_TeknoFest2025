@@ -1,0 +1,3 @@
+simple-pid
+opencv-python
+pyserial
