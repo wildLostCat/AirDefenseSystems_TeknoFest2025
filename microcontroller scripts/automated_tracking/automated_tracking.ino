@@ -1,11 +1,11 @@
 #include <ArduinoJson.h>
 
-unsigned long previousMillisForX = 0;  
-long intervalx = .1;                // interval at which to blink (milliseconds)
-unsigned long previousMillisForY = 0;  
-long intervaly = .1;                 // interval at which to blink (milliseconds)
-unsigned long currentMillisX;
-unsigned long currentMillisY;
+unsigned long previousMicrosForX = 0;  
+long intervalx = 1;                // interval at which to blink (microseconds)
+unsigned long previousMicrosForY = 0;  
+long intervaly = 1;                
+unsigned long currentMicrosX;
+unsigned long currentMicrosY;
 
 JsonDocument doc;
 
@@ -21,7 +21,7 @@ const int MOTORY_MS1_PIN = 22;
 const int MOTORY_MS2_PIN = 16;
 const int MOTORY_MS3_PIN = 17;
 
-const int LASER_PIN 18;
+const int LASER_PIN = 18;
 
 int x_vel = 0;
 int y_vel = 0;
@@ -34,7 +34,7 @@ char test[128];
 
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(921600);
 
   //X stepper
   pinMode(MOTORX_STEP_PIN, OUTPUT);
@@ -73,11 +73,11 @@ void loop() {
   }else{
     digitalWrite(LASER_PIN, LOW);
   
-    currentMillisX = millis();
+    currentMicrosX = micros();
     if (x_vel != 0) {
       intervalx = 100 / x_vel;
-      if (currentMillisX - previousMillisForX >= intervalx) {
-        previousMillisForX = currentMillisX;
+      if (currentMicrosX - previousMicrosForX >= intervalx) {
+        previousMicrosForX = currentMicrosX;
         if (x_dir == 0) {
           digitalWrite(MOTORX_DIRECTION_PIN, LOW);
         } else {
@@ -85,17 +85,17 @@ void loop() {
           
         }
         digitalWrite(MOTORX_STEP_PIN, HIGH);
-        delay(1);
+        delayMicroseconds(1);
         digitalWrite(MOTORX_STEP_PIN, LOW);
       }
     }
 
 
-    currentMillisY = millis();
+    currentMicrosY = micros();
     if (y_vel != 0) {
       intervaly = 100 / y_vel;
-      if (currentMillisY - previousMillisForY >= intervaly) {
-        previousMillisForY = currentMillisY;
+      if (currentMicrosY - previousMicrosForY >= intervaly) {
+        previousMicrosForY = currentMicrosY;
         if (y_dir == 0) {
           digitalWrite(MOTORY_DIRECTION_PIN, LOW);   
           
@@ -104,7 +104,7 @@ void loop() {
         
         }
         digitalWrite(MOTORY_STEP_PIN, HIGH);
-        delay(1);
+        delayMicroseconds(1);
         digitalWrite(MOTORY_STEP_PIN, LOW);
       }
     }
@@ -113,18 +113,20 @@ void loop() {
 
 void handleCommunication() {
   availableBytes = Serial.available();
-  for(int i=0; i<availableBytes; i++)
-  {
-      test[i] = Serial.read();
-      test[i+1] = '\0'; // Append a null
+  if (availableBytes>0){
+    for(int i=0; i<availableBytes; i++)
+    {
+        test[i] = Serial.read();
+        test[i+1] = '\0'; // Append a null
+    }
   }
 
   DeserializationError error = deserializeJson(doc, test);
 
   // Test if parsing succeeds.
   if (error) {
-    Serial.print(F("deserializeJson() failed: "));
-    Serial.println(error.f_str());
+    // Serial.print(F("deserializeJson() failed: "));
+    // Serial.println(error.f_str());
     return;
   } else {
     x_vel = doc["vx"];
