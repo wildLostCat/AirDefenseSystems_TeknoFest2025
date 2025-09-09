@@ -30,6 +30,9 @@ int x_dir=0;
 int y_dir=0;
 int laser=0;
 
+int update_count=0;
+long previous_ms=millis();
+
 char test[128];
 
 
@@ -75,7 +78,7 @@ void loop() {
   
     currentMicrosX = micros();
     if (x_vel != 0) {
-      intervalx = 100 / x_vel;
+      intervalx = 150000 / x_vel; //Run at max 1.5ms
       if (currentMicrosX - previousMicrosForX >= intervalx) {
         previousMicrosForX = currentMicrosX;
         if (x_dir == 0) {
@@ -93,7 +96,7 @@ void loop() {
 
     currentMicrosY = micros();
     if (y_vel != 0) {
-      intervaly = 100 / y_vel;
+      intervaly = 150000 / y_vel;
       if (currentMicrosY - previousMicrosForY >= intervaly) {
         previousMicrosForY = currentMicrosY;
         if (y_dir == 0) {
@@ -113,26 +116,22 @@ void loop() {
 
 void handleCommunication() {
   availableBytes = Serial.available();
-  if (availableBytes>0){
-    for(int i=0; i<availableBytes; i++)
-    {
-        test[i] = Serial.read();
-        test[i+1] = '\0'; // Append a null
+
+  //packet : [dx][dy][vx][vy][las]
+  if (availableBytes){
+    if (Serial.read()==0xFF){
+      x_dir = Serial.read();
+      y_dir = Serial.read();
+      x_vel = Serial.read();
+      y_vel = Serial.read();
+      laser = Serial.read();
+      if (Serial.read()!=0xEE){
+        x_dir = 0;
+        y_dir = 0;
+        x_vel = 0;
+        y_vel = 0;
+        laser = 0;
+      }
     }
-  }
-
-  DeserializationError error = deserializeJson(doc, test);
-
-  // Test if parsing succeeds.
-  if (error) {
-    // Serial.print(F("deserializeJson() failed: "));
-    // Serial.println(error.f_str());
-    return;
-  } else {
-    x_vel = doc["vx"];
-    y_vel = doc["vy"];
-    y_dir = doc["dy"];
-    x_dir = doc["dx"];
-    laser = doc["laser"];
   }
 }

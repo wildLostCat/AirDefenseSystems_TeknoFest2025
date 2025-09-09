@@ -4,8 +4,8 @@ import threading
 import numpy as np
 from simple_pid import PID
 import serial
-from async_serial_writer import AsyncSerialWriter
 import time
+import struct
 
 
 detection_cords = []
@@ -46,20 +46,20 @@ def init_control_trackbars():
     
     cv2.createTrackbar('Lower H1', 'main window', 0, 180, read_trackbars)
     cv2.createTrackbar('Upper H1', 'main window', 10, 180, lambda _ :None)
-    cv2.createTrackbar('Lower S1', 'main window', 100, 255, lambda _ :None)
+    cv2.createTrackbar('Lower S1', 'main window', 50, 255, lambda _ :None)
     cv2.createTrackbar('Upper S1', 'main window', 255, 255, lambda _ :None)
     cv2.createTrackbar('Lower V1', 'main window', 49, 255, lambda _ :None)
     cv2.createTrackbar('Upper V1', 'main window', 255, 255, lambda _ :None)
 
     cv2.createTrackbar('Lower H2', 'main window', 160, 180, lambda _ :None)
     cv2.createTrackbar('Upper H2', 'main window', 180, 180, lambda _ :None)
-    cv2.createTrackbar('Lower S2', 'main window', 75, 255, lambda _ :None)
+    cv2.createTrackbar('Lower S2', 'main window', 50, 255, lambda _ :None)
     cv2.createTrackbar('Upper S2', 'main window', 255, 255, lambda _ :None)
     cv2.createTrackbar('Lower V2', 'main window', 14, 255, lambda _ :None)
     cv2.createTrackbar('Upper V2', 'main window', 255, 255, lambda _ :None)
 
-    cv2.createTrackbar("kp",'main window', 4, 500, lambda _ :None)
-    cv2.createTrackbar("ki",'main window', 1, 500, lambda _ :None)
+    cv2.createTrackbar("kp",'main window', 20, 500, lambda _ :None)
+    cv2.createTrackbar("ki",'main window', 5, 500, lambda _ :None)
     cv2.createTrackbar("kd",'main window', 0, 500, lambda _ :None)
 
 
@@ -114,7 +114,6 @@ def get_pid_values():
                 # Update PID controllers
                 pid_output_x = pid_x(x_error)
                 pid_output_y = pid_y(y_error)   
-        time.sleep(.001)     
         
 
 def write_to_serial():
@@ -134,10 +133,17 @@ def write_to_serial():
             dy=0
             y_multiplier=-1
 
-        json_string = f'{{"dx":{dx}, "dy":{dy}, "vx":{int(pid_output_x)*x_multiplier}, "vy":{int(pid_output_y)*y_multiplier}, "laser":{laser}}}'
-        print(bytes(json_string, encoding="UTF-8"))
-        ser.write(bytes(json_string, encoding="UTF-8"))
-        time.sleep(.001)
+        packet = struct.pack(
+            "BBBBBBB",
+            0xFF,
+            dx,
+            dy, 
+            int(pid_output_x)*x_multiplier, 
+            int(pid_output_y)*y_multiplier,
+            laser,
+            0xEE
+            )
+        ser.write(packet)
 
 
 def detect_red():
@@ -209,6 +215,8 @@ def detect_red():
             pid_output_x, pid_output_y = 0, 0
         
 
+
+        #Draw + on frame
         cv2.line(display_frame,
                 (frame_center[0]-8, frame_center[1]), 
                 (frame_center[0]+8, frame_center[1]), 
@@ -231,6 +239,6 @@ def detect_red():
 if __name__ == "__main__":
     try:
         detect_red()
-        print("Finished execution...")
+        print("\nFinished execution...")
     except KeyboardInterrupt:
         print("\nForce exit...")
